@@ -49,15 +49,8 @@ my %ATTRIBUTES;
 
 =head2 new
 
-Create a sam alignment object. Takes either a sam entry as as string (one
- line of a sam file) or a key => value representation of the sam fields
- C<qname flag rname pos mapq cigar rnext pnext tlen seq qual opt>.
- While the first eleven fields are regular, C<opt> contains a string of all
- the optional fields added to the line.
-
-Returns a sam alignment object. For more informations on the sam format see
- L<http://samtools.sourceforge.net/SAM1.pdf>.
-
+Create a gff feature object. Takes either a gff line or a key => value
+ representation of the gff fields.
 
 =cut
 
@@ -87,10 +80,10 @@ sub new{
     }
 
     bless $self, $class;
-    
+
     # process attributes
     $self->attributes($self->{attributes});
-    
+
     return $self;
 
 }
@@ -109,8 +102,6 @@ Get/Set the field values.
 
 =head2 seqid
 
-Get/set seqid.
-
 =cut
 
 sub seqid{
@@ -122,8 +113,6 @@ sub seqid{
 }
 
 =head2 source
-
-Get/set source.
 
 =cut
 
@@ -137,8 +126,6 @@ sub source{
 
 =head2 type
 
-Get/set type.
-
 =cut
 
 sub type{
@@ -150,8 +137,6 @@ sub type{
 }
 
 =head2 start
-
-Get/set start.
 
 =cut
 
@@ -165,8 +150,6 @@ sub start{
 
 =head2 end
 
-Get/set end.
-
 =cut
 
 sub end{
@@ -178,8 +161,6 @@ sub end{
 }
 
 =head2 score
-
-Get/set score.
 
 =cut
 
@@ -193,8 +174,6 @@ sub score{
 
 =head2 strand
 
-Get/set strand.
-
 =cut
 
 sub strand{
@@ -206,8 +185,6 @@ sub strand{
 }
 
 =head2 phase
-
-Get/set phase.
 
 =cut
 
@@ -221,7 +198,10 @@ sub phase{
 
 =head2 attributes
 
-Get/set attributes.
+Get/set attributes. Takes STRING or HASH structure. Returns HASHREF structure.
+
+  $feat->attributes("ID=gene1;NAME=Gene1");
+  $feat->attributes(ID=>"gene1", NAME=>"Gene1");
 
 =cut
 
@@ -234,7 +214,7 @@ sub attributes{
     }else {
         die (((caller 0)[3])." requires either single string or HASH!\n");
     }
-    
+
     return $self->{attributes};
 }
 
@@ -270,7 +250,17 @@ sub length{
 }
 
 
-=head2 att/attribute
+=head2 attr/attribute
+
+Get/set attributes.
+
+NOTE: Always returns LIST of values as some attributes can have multiple values,
+e.g. "Parent".
+
+  my ($id) = $feat->attr('ID');
+  my @parent_ids = $feat->attr('Parent');
+
+  $feat->attr('ID', ["new-ID"]);
 
 =cut
 
@@ -353,7 +343,7 @@ sub _string_attributes{
             }
         }
     }
-    
+
     return $as;
 }
 
