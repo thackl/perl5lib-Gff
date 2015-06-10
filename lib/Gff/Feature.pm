@@ -278,11 +278,37 @@ sub length{
 *attr = \&attribute;
 
 sub attribute{
-    my ($self, $tag) = @_;
+    my ($self, $tag, $value) = @_;
+    die (((caller 0)[3]).": $tag required") unless $tag;
+    if (@_ > 2) {
+        die (((caller 0)[3])."($tag): Value needs to be ARRAYREF\n") if defined $value && ref($value) ne "ARRAY";
+        if (defined $value && @$value) {
+            $self->{attributes}{$tag}=$value;
+        }else {
+            delete $self->{attributes}{$tag};
+        }
+    }
     my $attr = $self->{attributes}{$tag};
     return defined $attr ? @$attr : ();
 }
 
+
+=head2 id, parents
+
+Convenience functions to attributes.
+
+=cut
+
+sub id{
+    my $self = shift;
+    my ($id) = $self->attr('ID', @_>0 ? [@_] : ());
+    return $id;
+}
+
+sub parents{
+    my $self = shift;
+    return $self->attr('Parent', @_);
+}
 
 =head2 _hash_attributes
 
