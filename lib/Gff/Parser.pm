@@ -154,6 +154,100 @@ sub next_segment{
 }
 
 
+=head2 next_groups
+
+  groups =  {
+    groups => {
+      type => [{
+        primary => feat(parent)
+        children =>
+      },...],
+    }
+    groups_by_id => {
+      group_id => group, ...
+    },
+    features_by_id => {
+      feat_id => feat, ...
+    }
+    children => [feat, ...]
+  }
+
+
+primary => {types}[{
+     %feat_obj
+     children => {types}[],
+  },
+  children => {type}[feat_objs],
+  by_id => {id}{feat_obj}
+
+=cut
+
+sub next_groups{
+    my ($self) = @_;
+    my %g;
+    my $fh = $self->{fh};
+
+    while ( <$fh> ) {
+        next if /^\s*$/;
+        if (/^#/) {
+            if (/^###/) {
+                %g && last; # structure segment features
+                next; # empty segment
+            }
+            if (/^##FASTA/){
+                $self->next_segment() || last; #eof
+            }
+            next;
+        }
+
+        # return gff feat object
+        my $feat = Gff::Feature->new($_);
+        $self->eval_feature($feat) || next;
+
+
+        if ($feat->parents) { # child
+            # In case of multiple CDS per mRNA, maker does not create unique
+            # ids. Need to make them unique...
+            my $id = my $oid = $feat->id;
+            my $x = 1;
+            while (exists $g{features_by_id}{$id}){
+                print "Non-uniq: $id\n";
+                $x++;
+                $id = "$oid:$x";
+            }
+            print "X:$x\nUniq: $id\n";
+            $feat->id($id) if $x > 1;
+
+            $g{features_by_id}{$id} = $feat;
+
+            push @{$g{children}}, $feat;
+        }else {
+            die ($feat->id)." is not unique in GFF. Unique IDs are required for primary features." if exists $g{features_by_id}{$feat->id};
+            $g{features_by_id}{$feat->id} = $feat;
+
+            my $g = {primary => $feat, children => {}};
+            $g{groups_by_id}{$feat->id} = $g;
+            push @{$g{groups}{$feat->type}}, $g;
+        }
+
+    }
+
+    if (%g) {
+        # sort the children
+        foreach my $feat ( @{$g{children}} ) {
+            my $p = $feat;
+            while (my ($id) = $p->parents) { # climb up children to primary parent
+                die "$id" unless exists $g{features_by_id}{$id};
+                $p = $g{features_by_id}{$id};
+            }
+            push @{$g{groups_by_id}{$p->id}{children}{$feat->type}}, $feat;
+        }
+    }
+
+    return %g ? \%g : undef;
+}
+
+
 =head2 append_feature
 
 Append an alignment to the file, provided as object or string. Returns the
