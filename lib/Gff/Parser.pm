@@ -221,7 +221,7 @@ sub next_groups{
 
             push @{$g{children}}, $feat;
         }else {
-            die ($feat->id)." is not unique in GFF. Unique IDs are required for primary features." if exists $g{features_by_id}{$feat->id};
+            die (($feat->id)." is not unique in GFF. Unique IDs are required for primary features.") if exists $g{features_by_id}{$feat->id};
             $g{features_by_id}{$feat->id} = $feat;
 
             my $g = {primary => $feat, children => {}};
