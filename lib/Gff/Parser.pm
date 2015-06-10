@@ -211,11 +211,10 @@ sub next_groups{
             my $id = my $oid = $feat->id;
             my $x = 1;
             while (exists $g{features_by_id}{$id}){
-                print "Non-uniq: $id\n";
                 $x++;
                 $id = "$oid:$x";
             }
-            print "X:$x\nUniq: $id\n";
+
             $feat->id($id) if $x > 1;
 
             $g{features_by_id}{$id} = $feat;
