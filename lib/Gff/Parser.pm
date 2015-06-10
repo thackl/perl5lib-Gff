@@ -22,46 +22,6 @@ Parser module for SAM format files.
 
 =head1 SYNOPSIS
 
-  use Sam::Parser;
-  use Sam::Alignment ':flags';
-
-  my $sp = Sam::Parser->new(
-      # parse from a file
-    file => '/some/sam/file.sam',
-      #or from a file handle
-    fh => \*SAM,
-      # or even from a STRINGREF
-    file => \$sam_string,
-  );
-
-  # print names of all reference sequences from header
-  while(%h = $sp->next_header_line('@SQ')){
-  	print $h{'SN'}."\n";
-  }
-
-  # parser for file handle and with customized is routine
-  # read starts with 'C'
-  my $sp = Sam::Parser->new(
-    fh => \*SAM,
-    is => sub{ substr($_[0]->seq, 0, 1) eq 'C' }
-  );
-
-  # print read ids of all reads with bad quality
-  while( my $aln = $sp->next_aln() ){
-    print $aln->qname() if $aln->is_bad_quality();
-  }
-
-  # seek the begin of the alignments for reparsing
-  $sp->seek_alignment_section();
-
-  # reset the 'is' routine
-  $sp->is(MAPPED_BOTH);
-
-  # print sequences of read pairs with both reads mapped
-  while( my ($aln1, $aln2) = $sp->next_pair() ){
-    print $aln1->seq().", ".$aln2->seq()."\n";
-  }
-
 =cut
 
 =head1 Constructor METHOD
