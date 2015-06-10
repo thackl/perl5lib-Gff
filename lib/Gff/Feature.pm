@@ -328,10 +328,10 @@ sub _hash_attributes{
 sub _string_attributes{
     my ($self, $attr) = @_;
 
-    my $as = "";
+    my @as = ();
     foreach (@ATTRIBUTES) {
         if (my @attr = $self->attr($_)){
-            $as .= join(",", @attr) . ";";
+            push @as, "$_=". join(",", @attr);
         }
     }
 
@@ -339,12 +339,12 @@ sub _string_attributes{
     if (@custom_attr) {
         foreach (sort @custom_attr) {
             if (my @attr = $self->attr($_)){
-                $as .= join(",", @attr) . ";";
+                push @as, "$_=". join(",", @attr);
             }
         }
     }
 
-    return $as;
+    return join(";", @as);
 }
 
 
