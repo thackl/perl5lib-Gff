@@ -91,6 +91,7 @@ sub new{
         file => undef,
         is => undef,
         mode => '<',
+        region => {},
         # overwrite defaults
         @_,
     };
@@ -104,8 +105,22 @@ sub new{
 
     bless $self, $class;
 
-    # prepare "is" test routine
-    $self->is($self->{is});
+    # prepare region conditions
+    if ($self->{region}) {
+        if ($self->{region}{id}) {
+            $self->add_condition( sub{ $_[0]->seqid eq $_[1]->{region}{id} });
+        }
+        if (defined $self->{region}{to} && defined $self->{region}{from}) {
+            $self->add_condition(
+                sub{
+                    ($_[0]->start >= $_[1]->{region}{from} && $_[0]->start <= $_[1]->{region}{to}) || # ovl start
+                        ($_[0]->end >= $_[1]->{region}{from} && $_[0]->end <= $_[1]->{region}{to}) || # ovl end
+                            ($_[0]->start < $_[1]->{region}{from} && $_[0]->end > $_[1]->{region}{to}); # containing
+                });
+        }elsif (defined $self->{region}{from}) {
+            $self->add_condition(sub{ $_[0]->end >= $_[1]->{region}{from} });
+        }
+    }
 
     return $self;
 
@@ -142,17 +157,19 @@ sub next_feature{
     my ($self) = @_;
     my $fh = $self->{fh};
 
-    while (<$fh>) {
+    while ( <$fh> ) {
+        next if /^\s*$/;
         if (/^#/) {
             if (/^##FASTA/){
-                $self->next_segment() || last; #eof
+                $self->next_segment() || return; #eof
             }
             next;
         }
 
         # return gff feat object
         my $feat = Gff::Feature->new($_);
-        return $feat if !defined($self->{is}) || &{$self->{is}}($feat);
+        $self->eval_feature($feat) || next;
+        return $feat;
     }
     return;
 }
@@ -169,6 +186,7 @@ sub next_segment{
     my $fh = $self->{fh};
 
     while (<$fh>) {
+        next if /^\s*$/;
         return $_ if /^##/
     }
     #eof
@@ -222,39 +240,72 @@ sub fh{
 }
 
 
-=head2 is
+=head2 seek
 
-Only return features from parser satisfying custom criteria using a predefined
+Set the filehandle to the specified byte offset. Takes two
+optional arguments POSITION (default 0), WHENCE (default 0), see perl "seek" for more.
+Returns 'true' on success.
+
+NOTE: this operation only works on real files, not on STDIN.
+
+=cut
+
+sub seek{
+	my ($self, $offset, $whence) = (@_, 0, 0);
+	return seek($self->fh, $offset, $whence);
+}
+
+
+=head2 add_condition/reset_conditions
+
+Only return features from parser satisfying custom condition using a predefined
 function. The function is called with the feature object as first
 parameter. Only features that evaluate to TRUE are returned by the parser.
 
   # customize parser to only return 'gene' features from '-' strand.
-  $gp->is(sub{
+  $gp->add_condition(sub{
              my $feat = $_[0];
              return $feat->type eq 'gene' && $feat->strand eq '-';
          });
 
 
-  # deactivate testing
-  $gp->is(0);
+  # deactivate conditions
+  $gp->reset_conditions();
 
 =cut
 
-sub is{
-    my ($self, $is) = @_;
+sub add_condition{
+    my ($self, $cond) = @_;
 
-    if (@_== 2) {
-        unless($is){
-            $self->{is} = undef;
-        } elsif (ref($is) eq 'CODE') {
-            $self->{is} = $is;
-        } else {
-            die (((caller 0)[3])." requires CODE reference!\n");
-        }
+    if ($cond && ref($cond) eq 'CODE') {
+        $self->{cond} ||= [];
+        push @{$self->{cond}}, $cond;
+    } else {
+        die (((caller 0)[3])." requires condition as CODE reference!\n");
     }
-    return $self->{is};
+    return $self->{cond};
 }
 
+sub reset_conditions{
+    my ($self, $cond) = @_;
+    $self->{cond} = [];
+}
+
+=head2 eval_feature
+
+Returns TRUE if feature matches "conditions" set for parser.
+
+  $gp->eval_feature($feat)
+
+=cut
+
+sub eval_feature{
+    my ($self, $feat) = @_;
+    if ($self->{cond}) {
+        foreach ( @{$self->{cond}} ){ $_->($feat, $self) || return; }
+    }
+    return 1;
+}
 
 ##----------------------------------------------------------------------------##
 
