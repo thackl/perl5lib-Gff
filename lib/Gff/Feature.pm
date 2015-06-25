@@ -210,7 +210,8 @@ sub attributes{
 
     if ( @attr%2 == 0) {
         $self->{attributes} = {@attr};
-        die (((caller 0)[3]).": attribute values need to be ARRAYREFs\n") if grep{ref $_ ne 'ARRAY'} values %$self->{attributes}; # require ARRAYREFS
+        die (((caller 0)[3]).": attribute values need to be ARRAYREFs\n")
+            if grep{ref $_ ne 'ARRAY'} values %{$self->{attributes}}; # require ARRAYREFS
 
     }elsif (@attr == 1) {
         $self->_hash_attributes(@attr)
