@@ -208,7 +208,14 @@ sub next_groups{
         if ($feat->parents) { # child
             # In case of multiple CDS per mRNA, maker does not create unique
             # ids. Need to make them unique...
-            my $id = my $oid = $feat->id;
+            my $id = $feat->id;
+
+            if (! defined $id) { # seen exons/introns w/o ID
+                my ($pid) = $feat->parents;
+                $id = $pid.'.'.$feat->type;
+            }
+
+            my $oid = $id;
             my $x = 1;
             while (exists $g{features_by_id}{$id}){
                 $x++;
